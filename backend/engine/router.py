@@ -1,9 +1,10 @@
+import asyncio
 import logging
 
 from engine.context_manager import ContextManager
 from engine.intent_classifier import IntentClassifier
 from engine.multi_intent import MultiIntentHandler
-from models.schemas import AgentResponse, HandlerResult, IntentType, MultiIntentResult, UserRequest
+from models.schemas import AgentResponse, IntentType, MultiIntentResult, UserRequest
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class IntentRouter:
         history = self.context_mgr.get_history(session.session_id)
 
         # 4. Intent classification
-        multi_intent = self.classifier.classify(request.message, history)
+        multi_intent = await asyncio.to_thread(self.classifier.classify, request.message, history)
 
         # 5. Check offensive
         if any(i.intent == IntentType.offensive for i in multi_intent.intents):
@@ -77,7 +78,6 @@ class IntentRouter:
         context = {
             "session_id": session.session_id,
             "history": history,
-            "multi_intent": multi_intent,
         }
         results, reply = await self.multi_handler.resolve(multi_intent, context)
 
@@ -94,12 +94,12 @@ class IntentRouter:
         )
 
     async def _fallback_generate(self, message: str, history: list) -> str:
-        from openai import OpenAI
+        from openai import AsyncOpenAI
         from config.settings import settings
 
-        client = OpenAI(api_key=settings.llm_api_key, base_url=settings.llm_base_url)
+        client = AsyncOpenAI(api_key=settings.llm_api_key, base_url=settings.llm_base_url)
         try:
-            resp = client.chat.completions.create(
+            resp = await client.chat.completions.create(
                 model=settings.llm_model,
                 messages=[
                     {"role": "system", "content": "你是一个友好的电商客服助手。请用中文简洁地回答用户问题。"},

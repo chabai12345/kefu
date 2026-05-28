@@ -2,7 +2,7 @@ import time
 import uuid
 from typing import Dict, Optional
 
-from models.schemas import ChatMessage, IntentType, SessionContext
+from models.schemas import ChatMessage, SessionContext
 
 
 class ContextManager:

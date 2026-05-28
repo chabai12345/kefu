@@ -105,6 +105,8 @@ class MultiIntentHandler:
         intents: List[IntentResult],
         context: Dict,
     ) -> Tuple[List[HandlerResult], str]:
+        if not intents:
+            return [], "请确认您的具体需求"
         best = max(intents, key=lambda i: i.confidence)
         if best.confidence < 0.7:
             return [], "您刚才提到了几种不同的操作，请问您最终想怎么做呢？"
