@@ -61,7 +61,6 @@ Analyze the user's message and classify it into one or more intents from the lis
 {message}
 
 ## Output Format
-```json
 {
   "intents": [
     {"id": 1, "intent": "...", "params": {...}, "confidence": 0.95}
@@ -71,4 +70,3 @@ Analyze the user's message and classify it into one or more intents from the lis
   "primary_intent_id": 1,
   "summary": "简短总结用户意图"
 }
-```
