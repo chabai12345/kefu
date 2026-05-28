@@ -1,16 +1,17 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent.parent / ".env")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pathlib import Path
 
 from api.routes import router as api_router
 from config.settings import settings
-
-load_dotenv(Path(__file__).parent.parent / ".env")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,9 +20,20 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Server starting on {settings.host}:{settings.port}")
+    # Start RAG MCP client
+    from tools.rag_client import rag_client
+    try:
+        await rag_client.start()
+    except Exception as e:
+        logger.warning(f"RAG MCP client failed to start: %s", e)
     cleanup_task = asyncio.create_task(_periodic_cleanup())
     yield
     cleanup_task.cancel()
+    # Close RAG MCP client
+    try:
+        await rag_client.close()
+    except Exception as e:
+        logger.warning(f"RAG MCP client close error: %s", e)
     logger.info("Server shutting down")
 
 

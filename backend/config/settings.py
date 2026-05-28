@@ -19,9 +19,6 @@ class Settings:
     # RAG MCP Server
     rag_mcp_url: str = os.getenv("RAG_MCP_URL", "http://localhost:8000")
 
-    # Web search
-    web_search_provider: str = os.getenv("WEB_SEARCH_PROVIDER", "duckduckgo")
-
     # Server
     host: str = os.getenv("HOST", "0.0.0.0")
     port: int = int(os.getenv("PORT", "8001"))

@@ -53,7 +53,7 @@ export default function ChatPage() {
       </div>
 
       {/* Side panel */}
-      <SidePanel connected={connected} messageCount={messages.length} />
+      <SidePanel connected={connected} messageCount={messages.length} onSend={send} />
     </div>
   )
 }

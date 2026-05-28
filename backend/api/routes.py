@@ -3,13 +3,13 @@ from typing import Optional
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from api.order_routes import router as order_router
 from api.ws_handler import handle_websocket
 from config.settings import settings
+from engine.agent import AgentExecutor
 from engine.context_manager import ContextManager
 from engine.intent_classifier import IntentClassifier
-from engine.multi_intent import MultiIntentHandler
 from engine.router import IntentRouter
-from handlers import register_all_handlers
 from models.schemas import UserRequest
 
 logger = logging.getLogger(__name__)
@@ -19,9 +19,10 @@ router = APIRouter()
 # Initialize engine
 classifier = IntentClassifier()
 context_mgr = ContextManager(timeout_minutes=settings.session_timeout_minutes)
-multi_handler = MultiIntentHandler()
-register_all_handlers(multi_handler)
-intent_router = IntentRouter(classifier, context_mgr, multi_handler)
+agent_executor = AgentExecutor()
+router.include_router(order_router)
+
+intent_router = IntentRouter(classifier, context_mgr, agent_executor)
 
 
 @router.get("/health")

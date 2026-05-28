@@ -1,10 +1,11 @@
 import asyncio
 import logging
 
+from engine.agent import AgentExecutor
 from engine.context_manager import ContextManager
 from engine.intent_classifier import IntentClassifier
-from engine.multi_intent import MultiIntentHandler
-from models.schemas import AgentResponse, IntentType, MultiIntentResult, UserRequest
+from models.schemas import AgentResponse, IntentType, UserRequest
+from tools.tool_definitions import execute_list_user_orders, execute_query_knowledge_base
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +15,11 @@ class IntentRouter:
         self,
         classifier: IntentClassifier,
         context_mgr: ContextManager,
-        multi_handler: MultiIntentHandler,
+        agent_executor: AgentExecutor,
     ):
         self.classifier = classifier
         self.context_mgr = context_mgr
-        self.multi_handler = multi_handler
+        self.agent_executor = agent_executor
 
     async def route(self, request: UserRequest) -> AgentResponse:
         # 1. Get or create session
@@ -74,12 +75,49 @@ class IntentRouter:
             last_intent=primary.intent,
         )
 
-        # 9. Multi-intent handling
+        # 8b. Shortcuts: bypass LLM for known simple intents
+        if primary.intent == IntentType.order_status and not primary.params.get("order_id"):
+            reply = await execute_list_user_orders()
+            self.context_mgr.add_message(session.session_id, "assistant", reply)
+            return AgentResponse(
+                session_id=session.session_id,
+                reply=reply,
+                intents=multi_intent.intents,
+            )
+
+        if primary.intent == IntentType.greeting:
+            reply = "您好！请问有什么可以帮您的？"
+            self.context_mgr.add_message(session.session_id, "assistant", reply)
+            return AgentResponse(
+                session_id=session.session_id,
+                reply=reply,
+                intents=multi_intent.intents,
+            )
+
+        if primary.intent == IntentType.farewell:
+            reply = "感谢您的咨询，祝您生活愉快！再见~"
+            self.context_mgr.add_message(session.session_id, "assistant", reply)
+            return AgentResponse(
+                session_id=session.session_id,
+                reply=reply,
+                intents=multi_intent.intents,
+            )
+
+        if primary.intent == IntentType.after_sale_policy:
+            reply = await execute_query_knowledge_base(query="售后政策 退换货规则 保修")
+            self.context_mgr.add_message(session.session_id, "assistant", reply)
+            return AgentResponse(
+                session_id=session.session_id,
+                reply=reply,
+                intents=multi_intent.intents,
+            )
+
+        # 9. Agent execution (LLM tool calling)
         context = {
             "session_id": session.session_id,
             "history": history,
         }
-        results, reply = await self.multi_handler.resolve(multi_intent, context)
+        reply = await self.agent_executor.execute(request.message, history)
 
         # 10. If no handler returned content, fallback LLM reply
         if not reply:

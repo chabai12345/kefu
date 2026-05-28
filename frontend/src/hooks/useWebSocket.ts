@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import type { AgentResponse, ChatMessage } from '../types'
 
-const WS_URL = `ws://${window.location.hostname}:8001/ws`
+const WS_URL = `ws://${window.location.hostname}:8001/api/v1/ws`
 
 export function useWebSocket() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
